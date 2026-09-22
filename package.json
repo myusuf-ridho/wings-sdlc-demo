@@ -1,0 +1,21 @@
+{
+  "name": "wings-sdlc-demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "SDLC demo scaffold: Next.js dashboard + NestJS API with SonarQube SAST and Jenkins CI",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev --workspace apps/api\" \"npm run dev --workspace apps/web\"",
+    "build": "npm run build --workspace apps/api && npm run build --workspace apps/web",
+    "lint": "npm run lint --workspace apps/api && npm run lint --workspace apps/web",
+    "test": "npm run test --workspace apps/api && npm run test --workspace apps/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
