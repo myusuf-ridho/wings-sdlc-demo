@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { DashboardSummary, fetchDashboardSummary } from '@/lib/api';
+import {
+  DashboardSummary,
+  fetchDashboardSummary,
+  isAbortError,
+} from '@/lib/api';
 import { getTokenCookie } from '@/lib/session';
 
 /**
@@ -13,19 +17,43 @@ export default function DashboardPage() {
   const router = useRouter();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = getTokenCookie();
     if (!token) {
+      setLoading(false);
       router.replace('/login');
       return;
     }
 
-    fetchDashboardSummary(token)
-      .then(setSummary)
-      .catch(() =>
-        setError('Could not load dashboard data. Your session may have expired.'),
-      );
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+
+    fetchDashboardSummary(token, { signal: controller.signal })
+      .then((data) => {
+        setSummary(data);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (isAbortError(err) || controller.signal.aborted) {
+          return;
+        }
+        setSummary(null);
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Could not load dashboard data. Your session may have expired.',
+        );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      });
+
+    return () => controller.abort();
   }, [router]);
 
   return (
@@ -47,7 +75,7 @@ export default function DashboardPage() {
       <section className="content">
         <h1 className="page-title">Dashboard</h1>
         <p className="muted">
-          Key metrics at a glance{summary ? '' : ' — loading…'}
+          Key metrics at a glance{loading ? ' — loading…' : ''}
         </p>
 
         {error ? (
